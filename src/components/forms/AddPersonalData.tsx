@@ -1,8 +1,8 @@
 import { useState } from "react";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
-import { useFormContext } from "react-hook-form";
-import DatePicker, { Value } from "react-multi-date-picker";
+import { Controller, useFormContext } from "react-hook-form";
+import DatePicker, { DateObject, Value } from "react-multi-date-picker";
 import { Buttons } from "../UI";
 
 interface AddPersonalDataProps {
@@ -13,6 +13,7 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
   const {
     register,
     setValue,
+    control,
     formState: { errors },
   } = useFormContext();
   const [selectedDate, setSelectedDate] = useState<Value | null>(null);
@@ -21,7 +22,8 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
 
   const handleDateChange = (date: Value) => {
     setSelectedDate(date);
-    setValue("birthDate", date?.format());
+    if (date instanceof DateObject) setValue("birthDate", date?.format());
+    else setValue("birthDate", date);
   };
 
   const numChangeHandler = (
@@ -46,7 +48,7 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
             className={`input ${errors.firstName && "input-error"}`}
             {...register("firstName", { required: true })}
           />
-          {errors.firstName && <p className="error">{errors.firstName.message}</p>}
+          {errors.firstName && <p className="error">{String(errors.firstName.message)}</p>}
         </div>
 
         {/* last name */}
@@ -60,7 +62,7 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
             className={`input ${errors.lastName && "input-error"}`}
             {...register("lastName", { required: true })}
           />
-          {errors.lastName && <p className="error">{errors.lastName.message}</p>}
+          {errors.lastName && <p className="error">{String(errors.lastName.message)}</p>}
         </div>
 
         {/* birth date */}
@@ -86,7 +88,7 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
               height: "40px",
             }}
           />
-          {errors.birthDate && <p className="error">{errors.birthDate.message}</p>}
+          {errors.birthDate && <p className="error">{String(errors.birthDate.message)}</p>}
         </div>
 
         {/* phone number */}
@@ -94,7 +96,28 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
           <label htmlFor="phoneNumber" className="label">
             شماره تماس
           </label>
-          <input
+          <Controller
+            name="phoneNumber"
+            control={control}
+            defaultValue={phone}
+            rules={{ required: "شماره تماس را وارد کنید" }}
+            render={({ field }) => (
+              <input
+                type="tel"
+                id="phoneNumber"
+                className={`input ${errors.phoneNumber && "input-error"}`}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={11}
+                value={phone}
+                onChange={(e) => {
+                  numChangeHandler(e, setPhone);
+                  field.onChange(e);
+                }}
+              />
+            )}
+          />
+          {/* <input
             type="tel"
             id="phoneNumber"
             className={`input ${errors.phoneNumber && "input-error"}`}
@@ -102,10 +125,13 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
             pattern="[0-9]*"
             maxLength={11}
             value={phone}
-            onInput={(e) => numChangeHandler(e, setPhone)}
+            onChange={(e) => {
+              numChangeHandler(e, setPhone);
+              register("phoneNumber").onChange(e);
+            }}
             {...register("phoneNumber", { required: true })}
-          />
-          {errors.phoneNumber && <p className="error">{errors.phoneNumber.message}</p>}
+          /> */}
+          {errors.phoneNumber && <p className="error">{String(errors.phoneNumber.message)}</p>}
         </div>
 
         {/* national code */}
@@ -113,17 +139,27 @@ const AddPersonalData: React.FC<AddPersonalDataProps> = ({ nextStep }) => {
           <label htmlFor="nationalCode" className="label">
             کد ملی
           </label>
-          <input
-            type="text"
-            id="nationalCode"
-            className={`input ${errors.nationalCode && "input-error"}`}
-            inputMode="numeric"
-            maxLength={10}
-            onInput={(e) => numChangeHandler(e, setNationalCode)}
-            value={nationalCode}
-            {...register("nationalCode", { required: true })}
+          <Controller
+            name="nationalCode"
+            control={control}
+            defaultValue={nationalCode}
+            rules={{ required: "کد ملی را وارد کنید" }}
+            render={({ field }) => (
+              <input
+                type="text"
+                id="nationalCode"
+                className={`input ${errors.nationalCode && "input-error"}`}
+                inputMode="numeric"
+                maxLength={10}
+                onChange={(e) => {
+                  numChangeHandler(e, setNationalCode);
+                  field.onChange(e);
+                }}
+                value={nationalCode}
+              />
+            )}
           />
-          {errors.nationalCode && <p className="error">{errors.nationalCode.message}</p>}
+          {errors.nationalCode && <p className="error">{String(errors.nationalCode.message)}</p>}
         </div>
       </div>
       {/* buttons */}

@@ -1,19 +1,31 @@
 import { ChangeEvent, useEffect, useState } from "react";
+import { BASE_URL } from "../../config.json";
+
+interface FacilityType {
+  _id: string;
+  name: string;
+  repaymentType: number[];
+  amount: number;
+  interestRate: number;
+  penaltyRate: number;
+  interestPrice: number;
+  penaltyPrice: number;
+  repaymentPricePerMonth: number;
+}
 
 interface Facility {
-  facilityName: string;
+  _id: string;
   firstName: string;
   lastName: string;
+  birthDate: string;
   phoneNumber: string;
   nationalCode: string;
-  amount: string;
-  repaymentType: string;
-  monthlyInstallment: string;
-  interestPrice: string;
-  interestRate?: string; // Optional
-  percentageRate?: string; // Optional
-  penaltyPrice: string;
-  penaltyRate: string;
+  bankAccountNumber: string;
+  averageBalance: string;
+  shabaNumber: string;
+  facilityType: FacilityType;
+  repaymentType: number;
+  repaymentPricePerMonth: number;
 }
 
 const Facilities: React.FC = () => {
@@ -22,16 +34,24 @@ const Facilities: React.FC = () => {
   const [filteredFacilities, setFilteredFacilities] = useState<Facility[]>([]);
 
   useEffect(() => {
-    const savedFacilitiesStr = localStorage.getItem("facilities") || "[]";
-    const savedFacilities: Facility[] = JSON.parse(savedFacilitiesStr);
-    setFacilities(savedFacilities);
-    setFilteredFacilities(savedFacilities);
+    const fetchFacilities = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/facilities`);
+        const data = await res.json();
+        setFacilities(data);
+        setFilteredFacilities(data);
+        console.log(data);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    fetchFacilities();
   }, []);
 
-  console.log(facilities);
   const handleSearch = () => {
     const filterData = facilities.filter((facility) => {
-      const facilityName = facility.facilityName || "";
+      const facilityName = facility.facilityType.name || "";
       return facilityName.toLowerCase().includes(search.toLowerCase());
     });
     setFilteredFacilities(filterData);
@@ -81,12 +101,16 @@ const Facilities: React.FC = () => {
             {filteredFacilities.length > 0 ? (
               filteredFacilities.map((facility, index) => (
                 <tr key={index} className="bg-white hover:bg-[#f8f9fa] transition-all ease-in duration-300">
-                  <td className="facility-list-item font-bold text-secondary text-base">{facility.facilityName}</td>
+                  <td className="facility-list-item font-bold text-secondary text-base">
+                    {facility.facilityType.name}
+                  </td>
                   <td className="facility-list-item font-medium text-muted text-sm">{`${facility.firstName} ${facility.lastName}`}</td>
                   <td className="facility-list-item text-muted text-sm">{facility.phoneNumber}</td>
                   <td className="facility-list-item text-muted text-sm">{facility.nationalCode}</td>
                   <td className="facility-list-item text-muted text-sm">
-                    <span className="text-white bg-primary px-4 py-2 rounded-lg">{facility.amount} ریال</span>
+                    <span className="text-white bg-primary px-4 py-2 rounded-lg">
+                      {facility.facilityType.amount} ریال
+                    </span>
                   </td>
                   <td className="facility-list-item">
                     <span className="text-primary px-4 py-1 rounded-md font-medium select-none bg-[#E3ECF8]">
@@ -96,22 +120,22 @@ const Facilities: React.FC = () => {
                   <td className="facility-list-item text-muted text-sm">{facility.repaymentType}</td>
                   <td className="facility-list-item text-muted text-sm">
                     <span className="text-white bg-primary px-4 py-2 rounded-lg">
-                      {facility.monthlyInstallment} ریال
+                      {facility.repaymentPricePerMonth} ریال
                     </span>
                   </td>
                   <td className="facility-list-item text-muted text-sm">
                     <div className="flex gap-2 flex-nowrap">
-                      <span className="text-nowrap">{facility.interestPrice} ریال</span>
+                      <span className="text-nowrap">{facility.facilityType.interestPrice} ریال</span>
                       <span className="text-[#35AD8B] bg-[#E0F0ED] px-2 rounded-md select-none">
-                        {facility.interestRate || facility.percentageRate}%
+                        {facility.facilityType.interestRate}%
                       </span>
                     </div>
                   </td>
                   <td className="facility-list-item text-muted text-sm">
                     <div className="flex gap-2 flex-nowrap">
-                      <span className="text-nowrap">{facility.penaltyPrice} ریال</span>
+                      <span className="text-nowrap">{facility.facilityType.penaltyPrice} ریال</span>
                       <span className="text-[#BC102B] bg-[#F1DCE1] px-2 rounded-md select-none">
-                        {facility.penaltyRate}%
+                        {facility.facilityType.penaltyRate}%
                       </span>
                     </div>
                   </td>

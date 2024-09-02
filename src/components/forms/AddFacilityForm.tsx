@@ -1,7 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import { FormProvider, Resolver, useForm } from "react-hook-form";
-import { toast } from "react-toastify";
+import { Bounce, toast, ToastContainer } from "react-toastify";
+import { BASE_URL } from "../../../config.json";
 import { steps } from "../../constants/steps";
 import { bankAccountDataSchema, personalDataSchema } from "../../validations";
 import { CardSlider, Stepper } from "../UI";
@@ -65,14 +66,20 @@ const AddFacilityForm: React.FC = () => {
     if (currentStep > 1) setCurrentStep((prev) => prev - 1);
   };
 
-  const submitHandler = (data: FormData) => {
+  const submitHandler = async (data: FormData) => {
     notify();
-    const facilitiesList = JSON.parse(localStorage.getItem("facilities") || "[]") as FormData[];
-    facilitiesList.push(data);
-
-    localStorage.setItem("facilities", JSON.stringify(facilitiesList));
-    console.log("Form submitted:", data);
-    console.log("Facilities list saved to localStorage:", facilitiesList);
+    console.log(data);
+    try {
+      const res = await fetch(`${BASE_URL}/api/facilities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const fetchedData = await res.json();
+      console.log(fetchedData);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (

@@ -67,47 +67,36 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
 
         {/* RATES */}
         <div className="py-1 px-1 rounded-md flex flex-col justify-between items-start gap-2">
-          {item?.interestRate && (
-            <div className="flex items-center gap-1">
-              <span className="font-medium text-sm text-nowrap">نرخ بهره :</span>
-              <span className="text-sm bg-[#E3ECF8] text-primary font-medium rounded-[4px] py-[2px] px-1">
-                {`${item?.interestRate}%`}
-              </span>
-            </div>
-          )}
-          {item?.percentageRate && (
-            <div className="flex items-center gap-1">
-              <span className="font-medium text-sm text-nowrap">نرخ درصد :</span>
-              <span className="text-[#35AD8B] bg-[#E0F0ED] text-sm font-medium rounded-[4px] py-[2px] px-1">
-                {`${item?.percentageRate}%`}
-              </span>
-            </div>
-          )}
-          {item?.penaltyRate && (
-            <div className="flex items-center gap-1">
-              <span className="font-medium text-sm text-nowrap">نرخ جریمه :</span>
-              <span className="text-[#BC102B] bg-[#F1DCE1] text-sm font-medium rounded-[4px] py-[2px] px-1">
-                {`${item?.penaltyRate}%`}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-1">
+            <span className="font-medium text-sm text-nowrap">نرخ بهره :</span>
+            <span className="text-sm bg-[#E0F0ED] text-[#35AD8B] font-medium rounded-[4px] py-[2px] px-1">
+              {item.interestRate}%
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <span className="font-medium text-sm text-nowrap">نرخ جریمه :</span>
+            <span className="text-[#BC102B] bg-[#F1DCE1] text-sm font-medium rounded-[4px] py-[2px] px-1">
+              {item?.penaltyRate}%
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-row">
           <div className="flex flex-col items-center gap-2 rounded-lg p-1 max-w-[300px]">
             <span className="font-medium text-base text-nowrap text-primary w-fit relative">نوع بازپرداخت ها</span>
             <div className="flex flex-wrap justify-start gap-1 ms-4 w-[140px]">
-              {item?.repaymentType?.map((type, i) => (
+              {item.repaymentType?.map((type, i) => (
                 <span
                   key={i}
                   onClick={() => setItem(type)}
-                  className={`font-semibold text-[13px] border-2 border-solid border-secondary transition-all ease-in-out duration-300 hover:bg-primary hover:text-white rounded-full py-1 px-2 text-nowrap ${
+                  className={`font-semibold text-[13px] border-2 border-solid border-secondary transition-all ease-in-out duration-300 hover:bg-primary hover:text-white rounded-lg py-1 px-1 lg:px-2 text-nowrap ${
                     type.value === selectedFacility.repaymentType && item.id === selectedFacility.facilityId
                       ? "text-white bg-primary"
                       : "text-primary bg-white"
                   }`}
                 >
-                  {type.name}
+                  {type} ماهه
                 </span>
               ))}
             </div>

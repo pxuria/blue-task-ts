@@ -1,17 +1,34 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa6";
+import { BASE_URL } from "../../../config.json";
 import { data as facilities } from "../../constants/data.json";
 import { convertToPersian } from "../../utils";
 import { Buttons, FacilityItem, Modal } from "../UI";
 
 interface Facility {
+  id: string;
   name: string;
   amount: number;
   penaltyRate: number;
-  repaymentType: number;
-  percentageRate: number;
-  interestRate: string | number;
+  repaymentType: RepaymentType[];
+  percentageRate?: number;
+  interestRate?: number | string;
+  months: number;
+}
+
+interface RepaymentType {
+  name: string;
+  value: number;
+}
+
+interface FacilityState {
+  name: string;
+  amount: number;
+  penaltyRate: number;
+  repaymentType: number | string;
+  percentageRate?: number;
+  interestRate?: number;
   penaltyPrice: number;
   interestPrice: number;
   monthlyInstallment: number;
@@ -29,91 +46,128 @@ interface FacilitySelectionProps {
 
 const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backStep }) => {
   const { setValue } = useFormContext();
-  const [toggleModal, setToggleModal] = useState(false);
+  const [toggleModal, setToggleModal] = useState<boolean>(false);
+  const [facilityOptionList, setFacilityOptionList] = useState([]);
+
+  const initialFacility = facilities[0] || {};
+  const initialRepaymentType = initialFacility.repaymentType ? initialFacility.repaymentType[0]?.value : 0;
 
   const [selectedFacility, setSelectedFacility] = useState<SelectedFacility>({
-    facilityId: facilities[0].id,
-    repaymentType: facilities[0].repaymentType[0].value,
-  });
-
-  const [facility, setFacility] = useState({
-    name: facilities[0].name,
-    amount: facilities[0].amount,
-    penaltyRate: facilities[0].penaltyRate,
-    repaymentType: facilities[0].repaymentType[0].value,
-    percentageRate: facilities[0].percentageRate || "",
-    interestRate: facilities[0].interestRate || "",
-    penaltyPrice: (facilities[0].amount * facilities[0].penaltyRate) / 100,
-    interestPrice: ((facilities[0].interestRate ?? facilities[0].percentageRate) * facilities[0].amount) / 100,
-    monthlyInstallment: Math.round(
-      (((facilities[0].interestRate ?? facilities[0].percentageRate) / 100) * facilities[0].amount +
-        facilities[0].amount) /
-        facilities[0].repaymentType[0].value
-    ),
+    facilityId: initialFacility.id,
+    repaymentType: initialRepaymentType,
   });
 
   useEffect(() => {
-    setValue("facilityName", facility.name);
-    setValue("amount", facility.amount);
-    setValue("facilityId", selectedFacility.facilityId);
-    setValue("repaymentType", facility.repaymentType);
-    setValue("penaltyRate", facility.penaltyRate);
-    setValue("percentageRate", facility.percentageRate || "");
-    setValue("interestRate", facility.interestRate || "");
-    setValue("penaltyPrice", facility.penaltyPrice);
-    setValue("interestPrice", facility.interestPrice);
-    setValue("monthlyInstallment", facility.monthlyInstallment);
+    const fetchFacilities = async () => {
+      const res = await fetch(`${BASE_URL}/api/facility-types`);
+      const fetchedData = await res.json();
+      const data = await fetchedData.data;
+      setFacilityOptionList(data);
+    };
+    console.log(facilityOptionList);
+    fetchFacilities();
   }, []);
 
-  const setRepaymentTypeData = (data: (typeof facilities)[0], type: { value: number }) => {
-    setSelectedFacility({
-      facilityId: data.id,
-      repaymentType: type.value,
-    });
+  const calculateFacilityDetails = useCallback(
+    (facility: Facility, repaymentTypeValue: number | string): FacilityState => {
+      const amount = facility.amount;
+      const penaltyRate = facility.penaltyRate;
+      const interestRate =
+        typeof facility.interestRate === "string" ? parseFloat(facility.interestRate) : facility.interestRate || 0;
+      const percentageRate = facility.percentageRate || 0;
 
-    const updatedFacility: Facility = {
-      name: data.name,
-      amount: data.amount,
-      penaltyRate: data.penaltyRate,
-      repaymentType: type.value,
-      percentageRate: data.percentageRate ?? 0,
-      interestRate: data.interestRate ?? 0,
-      penaltyPrice: (data.amount * data.penaltyRate) / 100,
-      interestPrice: ((data.interestRate ?? data.percentageRate ?? 0) * data.amount) / 100,
-      monthlyInstallment: Math.round(
-        (((data.interestRate ?? data.percentageRate ?? 0) / 100) * data.amount + data.amount) / type.value
-      ),
-    };
+      const rate = interestRate || percentageRate;
 
-    setFacility(updatedFacility);
+      const penaltyPrice = (amount * penaltyRate) / 100;
+      const interestPrice = (rate * amount) / 100;
+      const monthlyInstallment = Math.round(((rate / 100) * amount + amount) / (repaymentTypeValue as number));
 
-    console.log(facility);
+      return {
+        name: facility.name,
+        amount: amount,
+        penaltyRate: penaltyRate,
+        repaymentType: repaymentTypeValue,
+        percentageRate: percentageRate,
+        interestRate: interestRate,
+        penaltyPrice: penaltyPrice,
+        interestPrice: interestPrice,
+        monthlyInstallment: monthlyInstallment,
+      };
+    },
+    []
+  );
 
-    // update form values
-    setValue("facilityName", data.name);
-    setValue("amount", data.amount);
-    setValue("facilityId", data.id);
-    setValue("repaymentType", type.value);
-    setValue("penaltyRate", data.penaltyRate);
-    setValue("percentageRate", data.percentageRate || "");
-    setValue("interestRate", data.interestRate || "");
-    setValue("penaltyPrice", (data.amount * data.penaltyRate) / 100);
-    setValue("interestPrice", updatedFacility.interestPrice);
-    setValue("monthlyInstallment", updatedFacility.monthlyInstallment);
+  // Initialize facility state
+  const [facility, setFacility] = useState<FacilityState>(
+    calculateFacilityDetails(initialFacility, initialRepaymentType)
+  );
 
-    setToggleModal(false);
-  };
+  // Function to update form values
+  const updateFormValues = useCallback(
+    (facilityDetails: FacilityState) => {
+      setValue("facilityName", facilityDetails.name);
+      setValue("amount", facilityDetails.amount);
+      setValue("facilityId", selectedFacility.facilityId);
+      setValue("repaymentType", facilityDetails.repaymentType);
+      setValue("penaltyRate", facilityDetails.penaltyRate);
+      setValue("percentageRate", facilityDetails.percentageRate || "");
+      setValue("interestRate", facilityDetails.interestRate || "");
+      setValue("penaltyPrice", facilityDetails.penaltyPrice);
+      setValue("interestPrice", facilityDetails.interestPrice);
+      setValue("monthlyInstallment", facilityDetails.monthlyInstallment);
+    },
+    [setValue, selectedFacility.facilityId]
+  );
 
-  const calculateMonthlyPayment = (
-    amount: number,
-    months: number,
-    interestRate: number,
-    percentageRate: number
-  ): string => {
-    const facilitiesInstallment = Math.round((((interestRate || percentageRate) / 100) * amount + amount) / months);
-    return convertToPersian(facilitiesInstallment);
-  };
+  // Update form values when facility state changes
+  useEffect(() => {
+    updateFormValues(facility);
+  }, [facility, updateFormValues]);
 
+  // Function to handle repayment type data update
+  const setRepaymentTypeData = useCallback(
+    (data: Facility, type: RepaymentType) => {
+      const updatedFacility = calculateFacilityDetails(data, type.value);
+
+      setSelectedFacility({
+        facilityId: data.id,
+        repaymentType: type.value,
+      });
+
+      setFacility(updatedFacility);
+
+      // Optionally, log the updated facility
+      console.log("Updated Facility:", updatedFacility);
+
+      setToggleModal(false);
+    },
+    [calculateFacilityDetails]
+  );
+
+  // Function to calculate monthly payment for display
+  const calculateMonthlyPayment = useCallback(
+    (amount: number, months: number, interestRate?: number, percentageRate?: number): string => {
+      const rate = interestRate || percentageRate || 0;
+      const facilitiesInstallment = Math.round(((rate / 100) * amount + amount) / months);
+      return convertToPersian(facilitiesInstallment);
+    },
+    []
+  );
+
+  const facilityOptions = useMemo(
+    () =>
+      facilityOptionList.map((item, index) => (
+        <FacilityItem
+          key={index}
+          index={index}
+          facilities={facilityOptionList}
+          item={item}
+          selectedFacility={selectedFacility}
+          setRepaymentTypeData={setRepaymentTypeData}
+        />
+      )),
+    [selectedFacility, setRepaymentTypeData]
+  );
   return (
     <>
       <div className="flex flex-wrap justify-start gap-4 mt-6">
@@ -133,7 +187,7 @@ const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backSte
               name="facilitySelection"
               id="facilitySelection"
               className="outline-none border-2 border-solid border-secondary px-2 py-1 rounded-md w-full h-[48px] ps-8 cursor-pointer bg-white hover:bg-[#f8f9fa]"
-              onClick={() => setToggleModal(!toggleModal)}
+              onClick={() => setToggleModal((prev) => !prev)}
               value={facility.name}
               readOnly
             />
@@ -141,16 +195,7 @@ const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backSte
           {toggleModal && (
             <Modal onClose={() => setToggleModal(false)}>
               <div className="w-full flex flex-col bg-[#f8f9fa] rounded-xl max-h-[80vh] overflow-y-scroll overflow-x-hidden">
-                {facilities?.map((item, index) => (
-                  <FacilityItem
-                    key={index}
-                    index={index}
-                    facilities={facilities}
-                    item={item}
-                    selectedFacility={selectedFacility}
-                    setRepaymentTypeData={setRepaymentTypeData}
-                  />
-                ))}
+                {facilityOptions}
               </div>
             </Modal>
           )}
@@ -180,7 +225,7 @@ const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backSte
             type="text"
             name="repaymentPeriod"
             id="repaymentPeriod"
-            value={`${convertToPersian(facility.repaymentType)} ماهه`}
+            value={`${convertToPersian(selectedFacility.repaymentType)} ماهه`}
             className="readonly-input"
             readOnly
           />
@@ -195,7 +240,7 @@ const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backSte
             type="text"
             name="numberOfInstallments"
             id="numberOfInstallments"
-            value={convertToPersian(facility.repaymentType)}
+            value={convertToPersian(selectedFacility.repaymentType)}
             className="readonly-input"
             readOnly
           />
@@ -213,7 +258,7 @@ const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backSte
             value={`${calculateMonthlyPayment(
               facility.amount,
               facility.repaymentType,
-              facility.interestRate,
+              facility.interestRate as number,
               facility.percentageRate
             )} ریال`}
             className="readonly-input"
@@ -236,7 +281,7 @@ const FacilitySelection: React.FC<FacilitySelectionProps> = ({ nextStep, backSte
             name="annualInterestPercentage"
             id="annualInterestPercentage"
             value={`${convertToPersian(
-              ((facility.interestRate || facility.percentageRate) * facility.amount) / 100
+              ((selectedFacility?.interestRate || selectedFacility?.percentageRate) * selectedFacility.amount) / 100
             )} ریال`}
             className="readonly-input"
             readOnly
